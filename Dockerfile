@@ -36,6 +36,10 @@ RUN mkdir -p /opt/work
 RUN npm run build -- --mode production --output-path /opt/work/build
 RUN make all
 
+# Built-in multiplex (required)
+COPY data/multiplex/djornl_v1_10layer.RData /kb/module/data/multiplex/djornl_v1_10layer.RData
+#import from github if needed.
+
 ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 
 CMD [ ]
