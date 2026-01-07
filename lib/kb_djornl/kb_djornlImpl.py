@@ -294,7 +294,32 @@ class kb_djornl:
     def _grin_to_genelist(self, tsv_path):
         return pd.read_csv(tsv_path, sep="\t", header=0).iloc[:, 1].dropna().tolist()
         
-    
+    def _run_grin_sh(self, env, outdir):
+        """
+        Run GRIN-run.sh but DO NOT raise on failure.
+        Always capture stdout/stderr to a file so users can debug.
+        Returns (returncode, stdout_path, stdout_text)
+        """
+        proc = subprocess.run(
+            ["/kb/module/scripts/GRIN-run.sh"],
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        out = proc.stdout or ""
+        stdout_path = os.path.join(outdir, "GRIN_run_stdout.txt")
+        with open(stdout_path, "w", encoding="utf-8") as fh:
+            fh.write(out)
+        return proc.returncode, stdout_path, out
+
+
+    def _tail(self, s, n=50000):
+        if not s:
+            return ""
+        return s[-n:] if len(s) > n else s
+
 
     #END_CLASS_HEADER
 
@@ -371,7 +396,7 @@ class kb_djornl:
 
         # Advanced defaults
         restart = float(params.get('restart', 0.7))
-        tau_csv = params.get('tau_csv', '1,1,1,1,1,1,1,1,1,1')
+        tau_csv = params.get('tau_csv', '1')
 
         # Scratch / output folder
         safe_label = "".join(c if c.isalnum() or c in ('-', '_') else "_" for c in output_name)
@@ -398,11 +423,8 @@ class kb_djornl:
   -t '{tau_csv}'
   -o '{outdir}'
 """
-        subprocess.run(
-            ["/kb/module/scripts/GRIN-run.sh"],
-            check=True,
-            env=rwrtools_env,
-        )
+        rc, grin_stdout_path, grin_stdout = self._run_grin_sh(rwrtools_env, outdir)
+
 
         # --- Inline HTML report (same cell) ---
         html_dir = os.path.join(outdir, "html")
